@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import time
 
 # artist friendly script to patch missing frames in a sequence by duplicating the frame before each missing chunk
 # useful for for previewing, or just to find missing frames
@@ -13,35 +14,47 @@ import sys
 def main():
 
     file_path = prompt_file()
+    if not file_path: 
+        sys.exit(0)
 
-    if file_path:
-        sequence_info = get_sequence_info(find_sequences(file_path))
+    sequence = find_sequences(file_path)
+    if sequence:
+        sequence_info = get_sequence_info(sequence)
         pad, existing, missing, prefix, ext = sequence_info
 
         display_range = f"{prefix}.{str(existing[0]).zfill(pad)} - {prefix}.{str(existing[-1]).zfill(pad)}"
-        display_missing = "".join([str(f).zfill(pad) + "\n" for f in missing])
+        display_missing = "".join([prefix + str(f).zfill(pad) + ext + "\n" for f in missing])
     else:
-        sys.exit(0)
+        pad, existing, missing, prefix, ext = None, None, None, None, None    
 
     def on_close():
         root.destroy()  
         sys.exit(0)     
 
+
     root = tk.Tk()
     root.title("Sequence Patcher Tool")
 
-    desc = tk.Label(root, text = f"patch missing frames in a sequence by duplicating\nthe frame before each missing chunk")
+    desc = tk.Label(root, text = f"This tool attempts to fill gaps in a file sequence\nby duplicating the frame before each gap\n---------------------")
     desc.pack(padx=30,pady=5)
 
-    seq_label = tk.Label(root, text = f"{display_range}")
-    seq_label.pack(padx=30,pady=5)
 
-    if missing:
+    if not sequence:
+        no_missing_label = tk.Label(root, text = f"No valid sequence found\n{file_path}", bg="red")
+        no_missing_label.pack(padx=30,pady=5)
+    else:
+        seq_label = tk.Label(root, text = f"{display_range}")
+        seq_label.pack(padx=30,pady=5)
+
+    
+    if missing and sequence:
         missing_label = tk.Label(root, text = f"{len(missing)} missing frames found:", bg="red")
         missing_label.pack(padx=30,pady=5)
 
-        scroll_text = ScrolledText(root, wrap=tk.WORD, width=pad*3, height=10)
+        scroll_text = ScrolledText(root, wrap=tk.WORD, width=len("".join(prefix + ext)) + (pad * 3), height=10)
         scroll_text.pack()
+
+        scroll_text.insert(tk.END, f"{display_missing}")
 
         def on_patch_clicked():
             success = patch_missing(sequence_info,file_path)
@@ -75,7 +88,6 @@ def main():
                 fail_label = tk.Label(root, text = f"warning: patch frames in subfolder do not match detected missing frames", bg="red")
                 fail_label.pack(padx=30,pady=5)
 
-        scroll_text.insert(tk.END, f"{display_missing}")
 
         patch_button = tk.Button(root,text="patch frames in same folder", command=lambda:on_patch_clicked(), bg="green", cursor="hand2")
         patch_button.pack(padx=30,pady=5)
@@ -83,13 +95,13 @@ def main():
         patch_folder_button = tk.Button(root,text="patch frames in new subfolder", command=lambda:on_patch_subfolder_clicked(), bg="green",cursor="hand2")
         patch_folder_button.pack(padx=30,pady=5)
 
-    else:
+    if not missing and sequence:
         no_missing_label = tk.Label(root, text = f"No missing frames found in sequence", bg="green")
         no_missing_label.pack(padx=30,pady=5)
 
     root.protocol("WM_DELETE_WINDOW", on_close)
     root.mainloop()
-
+    
 
 #return filename and path
 def prompt_file():
@@ -109,12 +121,16 @@ def find_sequences(file_path):
     selected_file = Path(file_path)
 
     if selected_file.is_file():
+        prefix, number, ext = None, None, None
         match = pattern.match(selected_file.name)
         if match:
             prefix, number, ext = match.groups()
             key = f"{prefix}#{ext}"
             sequence[key] = []
 
+    if not prefix or not number or not ext:
+        return None
+            
     for file in file_path.parent.iterdir():
         if file.is_file():
             match = pattern.match(file.name)
