@@ -10,7 +10,6 @@ import sys
 # useful for for previewing, or just to find missing frames
 # Bruno CC - May 2025 v1.0
 
-
 def main():
 
     file_path = prompt_file()
