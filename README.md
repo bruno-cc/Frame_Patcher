@@ -1,9 +1,8 @@
-**Frame Patcher**  
-
+# **Frame Patcher**
 A simple, artist-friendly python script to patch missing frames in a sequence  
 by duplicating the frame before each missing chunk  
 
-Useful for for previewing, or just to find missing frames! 
+Useful for for previewing, or just to find missing frames.
   
   
 **How to run:**  
@@ -14,4 +13,3 @@ Useful for for previewing, or just to find missing frames!
 That's it!  
 A window should appear prompting you to select a file  
 from the sequence you'd like to analyze or patch  
-
